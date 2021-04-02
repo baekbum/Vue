@@ -5,7 +5,7 @@
                 <div>
                     <b-dropdown id="user-search" :text="searchCondKey" class="m-md-2" variant="outline-primary">
                         <b-dropdown-item id='all' @click="fnSearchCondition('전체')">전체</b-dropdown-item>
-                        <b-dropdown-item id='id' @click="fnSearchCondition('아이디')">아이디</b-dropdown-item>
+                        <b-dropdown-item id='id' @click="fnSearchCondition('사원번호')">사원번호</b-dropdown-item>
                         <b-dropdown-item id='name' @click="fnSearchCondition('이름')">이름</b-dropdown-item>
                         <b-dropdown-item id='rank' @click="fnSearchCondition('직급')">직급</b-dropdown-item>
                         <b-dropdown-item id='position' @click="fnSearchCondition('직책')">직책</b-dropdown-item>
@@ -23,14 +23,14 @@
                 </div>
             </div>
             <div>
-                <b-button variant="outline-primary" @click="fnOpenUserModal('C')">등록</b-button>
+                <b-button variant="outline-primary" @click="fnOpenUserModal('C', null)">등록</b-button>
             </div>            
         </div>
         <div class="user-list-box">
             <table class="user-table">
                 <thead>
                     <tr style="height: 3.5vh;">
-                        <th scope="cols" style="width: 10%">아이디</th>
+                        <th scope="cols" style="width: 10%">사원번호</th>
                         <th scope="cols" style="width: 10%">이름</th>
                         <th scope="cols" style="width: 10%">전화번호</th>
                         <th scope="cols" style="width: 10%">주소</th>
@@ -43,7 +43,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="(user, index) in viewList" v-bind:key="index" style="height: 6.5vh;">
+                    <tr v-for="(user, index) in viewList" v-bind:key="index" style="height: 6.5vh; cursor: pointer;" @click="fnOpenUserModal('U', user)">
                         <td>{{user.id}}</td>
                         <td>{{user.name}}</td>
                         <td>{{user.tel}}</td>
@@ -61,7 +61,7 @@
         <div class="paging-box" ref="paging-box">
             <b-button variant="outline-primary" v-show="pageInfo.curPageRange !== 1" @click="fnPageCursor('first')">&lt;&lt;</b-button>
             <b-button variant="outline-primary" v-show="pageInfo.curPageRange !== 1" @click="fnPageCursor('before')">&lt;</b-button>
-            <b-button :variant="fnColorInit(i)" v-for="i in pageInfo.pageRepeatNum" v-bind:key="i" :value="(pageInfo.startPage - 1) + i" @click="fnPageClick($event)">
+            <b-button :variant="i == 1 ? 'outline-warning' : 'outline-primary'" v-for="i in pageInfo.pageRepeatNum" v-bind:key="i" :value="(pageInfo.startPage - 1) + i" @click="fnPageClick($event)">
                 {{(pageInfo.startPage - 1) + i}}
             </b-button>
             <b-button variant="outline-primary" v-show="pageInfo.curPageRange !== pageInfo.endPageRange" @click="fnPageCursor('next')">&gt;</b-button>
@@ -89,12 +89,12 @@ export default {
             searchCondString : '',
             searchCondition : {
               '전체' : 'ALL',
-              '아이디' : 'ID',
+              '사원번호' : 'ID',
               '이름' : 'NAME',
               '직급' : 'RANK',
               '직책' : 'POSITION',
               '팀' : 'TEAM',
-              '퇴사여부' : 'Retire'
+              '퇴사여부' : 'RETIRE'
             },
             searchCondParam :{
                 searchCond : '',
@@ -111,7 +111,7 @@ export default {
                 endPage : 1, // 끝 페이지
                 curPageRange : 1, // 현재 페이지 영역 넘버
                 endPageRange : 1, // 마지막 페이지 영역 넘버
-                pageRepeatNum : 0 // 반복 횟수
+                pageRepeatNum : 1 // 반복 횟수
             },
             userList : [],
             viewList : [],
@@ -149,8 +149,13 @@ export default {
 
                         me.pageInfo.startPage = ((me.pageInfo.curPageRange - 1) * 10) + 1;
                         me.pageInfo.endPage = ((me.pageInfo.startPage + 10) - 1) <= me.pageInfo.totalPage ? ((me.pageInfo.startPage + 10) - 1) : me.pageInfo.totalPage;
+                        me.pageInfo.pageRepeatNum = 0;
                         me.pageInfo.pageRepeatNum = (me.pageInfo.endPage + 1) - me.pageInfo.startPage;
 
+                        me.pageInfo.curPage = 1;
+                        me.lastElement = null;
+
+                        me.fnColorInit();
                         me.fnPaging();
                     }
                 });
@@ -190,20 +195,30 @@ export default {
             this.lastElement = target;
         },
         fnColorInit: function(index) {
-            if (1 === index) {
-                return 'outline-warning';
-            } else {
-                return 'outline-primary';
-            }            
+            this.lastElement = null;
+            let length = this.$refs["paging-box"].children.length;
+            
+            if (length > 4) {
+                let startNum = 2;
+                let endNum = length - 2;
+
+                for (let i = startNum; i < endNum; i++) {
+                    if (i === startNum) {
+                        this.$refs["paging-box"].children[i].setAttribute('class', 'btn btn-outline-warning');    
+                    } else {
+                        this.$refs["paging-box"].children[i].setAttribute('class', 'btn btn-outline-primary');
+                    }                    
+                }
+            }
         },
-        fnOpenUserModal: function(type) {
+        fnOpenUserModal: function(type, data) {
             if ('C' === type) {
                 this.userModalTitle = '사용자 등록';
-                this.$refs["modal"].init();
             } else {
                 this.userModalTitle = '사용자 수정';
             }
 
+            this.$refs["modal"].init(type, data);
             this.userModalType = type;
             
             this.$refs["modal"].$refs["user-modal"].show();
